@@ -1,7 +1,8 @@
 import maya.cmds as cmds
+import maya.OpenMaya as OpenMaya
 
 from . import transform
-
+from ...utils import apiUtils
 
 """
 Module for creating a Maya control object
@@ -10,7 +11,7 @@ Module for creating a Maya control object
 
 class Control(transform.Transform):
     """
-    Generic joint node
+    Generic control object
     """
     def __init__(self, shape='circle', color=0, *args, **kwargs):
         self.shape = shape
@@ -25,9 +26,24 @@ class Control(transform.Transform):
         # create parent buffer node
         # remove input nodes - delete history
 
-    # get shape
+    # get shapes
     def get_shapes(self):
         cmds.listRelatives(self.name, children=True, type='shape')
+
+        mDag = apiUtils.get_mDagPath(self.name)
+        shapesUtil = OpenMaya.MScriptUtil()
+        shapesUtil.createFromInt(0)
+        shapesPtr = shapesUtil.asUcharPtr()
+        mDag.numberOfShapesDirectlyBelow(shapesPtr)
+
+        numShapes = OpenMaya.MScriptUtil(shapesPtr).asUint()
+        shapes = []
+        for i in range(numShapes):
+            mDag.extendToShapeDirectlyBelow(i)
+            shapes.append(mDag.fullPathName())
+            mDag = apiUtils.get_mDagPath(self.name)
+
+        return shapes
 
     # set shapes
 
@@ -44,27 +60,3 @@ class Control(transform.Transform):
     # add attr (float, boolean, enum)
     # remove attr
     # move attr (up, down)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
