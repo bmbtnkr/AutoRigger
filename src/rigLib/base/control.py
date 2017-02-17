@@ -2,7 +2,7 @@ import maya.cmds as cmds
 import maya.OpenMaya as OpenMaya
 
 from . import transform
-from ...utils import apiUtils
+from src.utils import apiUtils
 
 """
 Module for creating a Maya control object
@@ -33,7 +33,7 @@ class Control(transform.Transform):
         mDag = apiUtils.get_mDagPath(self.name)
         shapesUtil = OpenMaya.MScriptUtil()
         shapesUtil.createFromInt(0)
-        shapesPtr = shapesUtil.asUcharPtr()
+        shapesPtr = shapesUtil.asUintPtr()
         mDag.numberOfShapesDirectlyBelow(shapesPtr)
 
         numShapes = OpenMaya.MScriptUtil(shapesPtr).asUint()
@@ -51,7 +51,13 @@ class Control(transform.Transform):
 
     # get color
     def get_color(self):
-        cmds.getAttr()
+        if not len(self.get_shapes()):
+            return False
+        elif len(self.get_shapes()) == 1:
+            return [cmds.getAttr('%s.overrideColor' % i) for i in self.get_shapes()][0]
+        elif len(self.get_shapes()) > 1:
+            return [cmds.getAttr('%s.overrideColor' % i) for i in self.get_shapes()]
+
     # set color
 
     # get rotate order
