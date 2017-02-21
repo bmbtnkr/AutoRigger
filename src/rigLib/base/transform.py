@@ -12,7 +12,7 @@ class Transform(object):
     def __init__(self, name='_null', create=True, worldMatrix=None, parent=None,
                  translateTo=None, rotateTo=None,
                  lockAttrs=None, hideAttrs=None, nonKeyableAttrs=None,
-                 translate=(0, 0, 0), rotate=(0, 0, 0), scale=(1, 1, 1)):
+                 translate=None, rotate=None, scale=None):
 
         self.name = name
         self.create = create
@@ -209,84 +209,3 @@ class Transform(object):
 
     def duplicate(self):
         cmds.duplicate(self.name)
-
-'''
-from AutoRigger.rigLib.base import transform
-from AutoRigger.rigLib.base import joint
-
-from rigger.src.rigLib.base import transform
-from rigger.src.rigLib.base import joint
-from rigger.src.rigLib.base import locator
-from rigger.src.rigLib.base import control
-from rigger.src.utils import apiUtils
-
-reload(transform)
-reload(joint)
-reload(locator)
-reload(control)
-reload(apiUtils)
-
-cmds.file(new=1, force=1)
-
-a = transform.Transform('blarg', translate=[1,2,3], rotate=[213, 21, 41], scale=(2, 1, 3))
-b = transform.Transform('blarg2', parent=a)
-c = transform.Transform('null43', parent=b)
-
-"""
-print a.get_parent()
-print a.get_translation()
-print a.get_rotation(worldSpace=True)
-print a.get_scale()
-print a.get_path()
-print d
-"""
-
-d = joint.Joint(name='test21312', rotate=(0, 34, 0), parent=c)
-
-print type(b)
-print dir(b)
-print b.__class__
-print b.__module__
-print b.__hash__
-print a.__hash__
-print vars(b)
-
-d2 = joint.Joint(name='my_new_joint2', translate=(5, 2, 1), parent=d)
-d3 = joint.Joint()
-
-print d2.get_path()
-print d2.get_translation(worldSpace=False)
-a = cmds.xform('my_new_joint2', translation=True, worldSpace=True, query=True)
-print d2.set_translation((2,3,4), worldSpace=False)
-cmds.xform('my_new_joint2', translation=(1,2,2), objectSpace=True)
-print d2.get_translation()
-print d2.get_scale()
-print cmds.xform(d2, matrix=1, os=1, q=1)
-print d2.get_matrix()
-print d2.get_matrix(False)
-
-l1 = locator.Locator(name='my_locator', translate=(-5, 5, 2), parent=b)
-#l1.set_matrix()
-l1.duplicate()
-
-l2 = locator.Locator(name='my_locator1', translate=(3, 3, 3), create=False, parent=l1)
-l2.set_matrix()
-
-
-c1 = control.Control(name='my_circle_con')
-
-cmds.listRelatives(c1, children=1, type='shape')
-
-
-mDag = apiUtils.get_mDagPath(c1)
-
-utilShapes = om.MScriptUtil()
-utilShapes.createFromInt(0)
-ptrShapes = utilShapes.asUintPtr()
-
-mDag.numberOfShapesDirectlyBelow(ptrShapes)
-numShapes = om.MScriptUtil(ptrShapes).asUint()
-print numShapes
-'''
-
-

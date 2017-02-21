@@ -13,18 +13,38 @@ class Control(transform.Transform):
     """
     Generic control object
     """
-    def __init__(self, shape='circle', color=0, *args, **kwargs):
+    def __init__(self, shape='circle', color=0, normal=(0,1,0), *args, **kwargs):
         self.shape = shape
         self.color = color
+        self.normal = normal
         super(Control, self).__init__(*args, **kwargs)
+        self.nullGrp = None
+        self.offsetGrp = None
+        self.animGrp = None
 
     def create_node(self):
         cmds.select(clear=True)
-        cmds.circle(name=self.name)
-        # create anim buffer parent node (optional)
-        # create constraint buffer parent node (optional)
-        # create parent buffer node
-        # remove input nodes - delete history
+
+        control = cmds.circle(name=self.name, normal=self.normal) # move this to set shapes
+        cmds.delete(self.name, constructionHistory=True)
+        self.name = transform.Transform(control[0], create=False)
+
+    def get_null_grps(self):
+        return self.nullGrp, self.offsetGrp, self.animGrp
+
+    def create_null_grps(self):
+        self.nullGrp = transform.Transform(name='null_%s_grp' % self.name)
+        self.offsetGrp = transform.Transform(name='offset_%s_grp' % self.name, parent=self.nullGrp)
+        self.animGrp = transform.Transform(name='anim_%s_grp' % self.name, parent=self.offsetGrp)
+
+        self.nullGrp.set_translation(self.name.get_translation())
+        self.nullGrp.set_rotation(self.name.get_rotation())
+        self.nullGrp.set_scale(self.name.get_scale())
+
+        self.name.set_parent(self.animGrp)
+        self.name.set_translation(worldSpace=False)
+        self.name.set_rotation(worldSpace=False)
+        self.name.set_scale()
 
     # get shapes
     def get_shapes(self):
@@ -46,6 +66,8 @@ class Control(transform.Transform):
         return shapes
 
     # set shapes
+    def set_shapes(self):
+        pass
 
     # parent shapes
 
@@ -59,6 +81,14 @@ class Control(transform.Transform):
             return [cmds.getAttr('%s.overrideColor' % i) for i in self.get_shapes()]
 
     # set color
+    def set_color(self, color=0):
+        if not self.get_shapes():
+            return False
+        if color > 31:
+            cmds.warning('Cannot set the attribute %s.overrideColor past its maximum value of 31. # ' % self.get_shapes())
+            return False
+        [cmds.setAttr('%s.overrideColor' % shape, color) for shape in self.get_shapes()]
+        return True
 
     # get rotate order
     # set rotate order
