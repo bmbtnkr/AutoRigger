@@ -26,9 +26,12 @@ Control Flags: FK[...], IK, Pole Vector, FK/IK Switch
 # ToDo: make this work with any number of middle joints
 
 import maya.cmds as cmds
+import maya.OpenMaya as OpenMaya
+import math
 from src.rigLib.base import transform
 from src.rigLib.base import control
 from src.rigLib.base import joint
+from src.utils import apiUtils
 
 
 class FkIkChain(object):
@@ -61,6 +64,7 @@ class FkIkChain(object):
             cmds.warning('Could not build FkIkChain block, not enough joints', self.joints)
             return False
 
+        # create joints
         rootJntBind = joint.Joint(name=self.joints[0], create=False)
         midJntBind = joint.Joint(name=self.joints[1], create=False)
         endJntBind = joint.Joint(name=self.joints[2], create=False)
@@ -79,6 +83,7 @@ class FkIkChain(object):
                                   translateTo=endJntBind, rotateTo=endJntBind,
                                   jointOrient=endJntBind.get_joint_orient(), jointTag='ikfkChain_end', parent=self.midJnt)
 
+        # create fk ctrls
         self.fkRootCtrl = control.Control(name=self.rootJnt.name.replace('jt', 'ctrl').replace('template', 'fk'),
                                           translateTo=self.rootJnt, rotateTo=self.rootJnt, normal=(1, 0, 0))
 
@@ -103,12 +108,16 @@ class FkIkChain(object):
         fkMidOrientConstraint = cmds.orientConstraint(self.fkMidCtrl.name, self.midJnt)[0]
         fkEndOrientConstraint = cmds.orientConstraint(self.fkEndCtrl.name, self.endJnt)[0]
 
-        self.ikCtrl = control.Control(name=self.endJnt.name.replace('jt', 'ctrl').replace('template', 'ik'), translateTo=self.endJnt, rotateTo=self.endJnt, lockAttrs=('r', 's', 'v'))
+        # create ik ctrls
+        self.ikCtrl = control.Control(name=self.endJnt.name.replace('jt', 'ctrl').replace('template', 'ik'),
+                                      translateTo=self.endJnt, rotateTo=self.endJnt, lockAttrs=('r', 's', 'v'))
         self.ikCtrl.create_null_grps()
         self.ikCtrl.nullGrp.set_scale((2,2,2))
         cmds.addAttr(self.ikCtrl.name, longName='ikBlend', attributeType='float', defaultValue=1, minValue=0, maxValue=1, keyable=True)
 
-        self.ikHandle = cmds.ikHandle(name='%s_ikHandle' % self.ikCtrl.name, startJoint=self.rootJnt, endEffector=self.endJnt, solver='ikRPsolver')
+        self.ikHandle = cmds.ikHandle(name='%s_ikHandle' % self.ikCtrl.name, startJoint=self.rootJnt, endEffector=self.endJnt,
+                                      solver='ikRPsolver')
+
         cmds.rename(self.ikHandle[1], '%s_effector' % self.endJnt)
         self.ikHandle = transform.Transform(name=self.ikHandle[0], create=False)
         ikHandleParentConstraint = cmds.parentConstraint(self.ikCtrl.name, self.ikHandle.name)[0]
@@ -124,8 +133,45 @@ class FkIkChain(object):
             constraintTarget = cmds.orientConstraint(constraint, weightAliasList=True, query=True)[0]
             cmds.connectAttr('%s.outputX' % fkOrientConstraintReverse, '%s.%s' % (constraint, constraintTarget))
 
+        # create pv ctrl
+        self.ikPvCtrl = control.Control(name=self.midJnt.name.replace('jt', 'ctrl').replace('template', 'pv'),
+                                        translate=self.set_pole_vector()[0], rotate=self.set_pole_vector()[1])
+        cmds.poleVectorConstraint(self.ikPvCtrl.name, self.ikHandle.name)
+
     def set_pole_vector(self):
-        pass
+        startV = apiUtils.set_mVector(self.rootJnt.get_translation())
+        midV = apiUtils.set_mVector(self.midJnt.get_translation())
+        endV = apiUtils.set_mVector(self.endJnt.get_translation())
+
+        startEnd = endV - startV
+        startMid = midV - startV
+        dotP = startMid * startEnd
+        proj = float(dotP) / float(startEnd.length())
+        startEndN = startEnd.normal()
+        projV = startEndN * proj
+        arrowV = startMid - projV
+        arrowV *= 2
+        finalV = arrowV + midV
+        pos = (finalV.x, finalV.y, finalV.z)
+
+        cross1 = startEnd ^ startMid
+        cross1.normalize()
+        cross2 = cross1 ^ arrowV
+        cross2.normalize()
+        arrowV.normalize()
+        matrixV = [arrowV.x, arrowV.y, arrowV.z, 0,
+                   cross1.x, cross1.y, cross1.z, 0,
+                   cross2.x, cross2.y, cross2.z, 0,
+                   0, 0, 0, 1]
+
+        matrixM = OpenMaya.MMatrix()
+        OpenMaya.MScriptUtil.createMatrixFromList(matrixV, matrixM)
+        matrixFn = OpenMaya.MTransformationMatrix(matrixM)
+
+        rot = matrixFn.eulerRotation()
+        rotEuler = (rot.x/math.pi*180, rot.y/math.pi*180, rot.z/math.pi*180)
+
+        return pos, rotEuler
 
     def get_pole_vector(self):
         return self.poleVector
