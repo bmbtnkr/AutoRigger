@@ -1,5 +1,6 @@
 import maya.cmds as cmds
 import maya.OpenMaya as OpenMaya
+import maya.OpenMayaAnim as OpenMayaAnim
 
 def get_mObject(obj):
     sel = OpenMaya.MSelectionList()
@@ -18,8 +19,54 @@ def get_mDagPath(obj):
 def get_matrix(mObj):
     pass
 
+
 def decomp_matrix(mObj, matrix):
     pass
+
+
+def get_plug(obj, plug):
+    mObj = get_mObject(obj)
+    dependNodeFn = OpenMaya.MFnDependencyNode(mObj)
+    try:
+        mPlug = dependNodeFn.findPlug(plug)
+    except RuntimeError:
+        cmds.warning('%s.%s attribute not found.' % (obj, plug))
+        return None
+    return mPlug
+
+def get_extra_attrs(obj):
+    pass
+
+# def get_extra_attrs(obj):
+#     mResult = []
+#     mObj = get_mObject(obj)
+#     mDepend = OpenMaya.MFnDependencyNode()
+#     mDagMod = OpenMaya.MDagModifier()
+#     mObjFn = OpenMaya.MFnDependencyNode()
+#
+#     mObjFn.setObject(mObj)
+#     mObjFnRef = mDepend.create(mObjFn.typeName())
+#
+#     mResult = get_extra_attr_list_diff(mObj, mObjFnRef)
+#     mDagMod.deleteNode(mObjFnRef)
+#     mDagMod.doIt()
+#     return mResult
+#
+#
+# def get_extra_attr_list_diff(mObj, mObjRef):
+#     mObjFn = OpenMaya.MFnDependencyNode()
+#     mObjFnRef = OpenMaya.MFnDependencyNode()
+#     mObjFn.setObject(mObj)
+#     mObjFnRef.setObject(mObjRef)
+#     mResult = []
+#
+#     if mObjFn.attributeCount() > mObjFnRef.attributeCount():
+#         for i in range(mObjFnRef.attributeCount() > mObjFn.attributeCount()):
+#             mAttr = mObjFn.attribute(i)
+#             mFnAttr = OpenMaya.MFnAttribute(mAttr)
+#             mResult.append(mFnAttr.name())
+#     return mResult
+
 
 def getAllExtraAttributes(obj):
     m_result = []
@@ -49,9 +96,59 @@ def getAttrListDifference( m_obj, m_objRef ):
             m_result.append( m_fnAttr.name() )
     return m_result
 
+def set_mVector(translation):
+    return OpenMaya.MVector(translation[0], translation[1], translation[2])
 
+def get_shapeNodes(obj):
+    mObj = get_mObject(obj)
 
+    mDag = OpenMaya.MDagPath()
+    mDagFn = OpenMaya.MFnDagNode(mObj)
+    mDagFn.getPath(mDag)
 
+    numShapesUtil = OpenMaya.MScriptUtil()
+    numShapesUtil.createFromInt(0)
+    numShapesPtr = numShapesUtil.asUintPtr()
+    mDag.numberOfShapesDirectlyBelow(numShapesPtr)
+    num_shape_nodes = OpenMaya.MScriptUtil(numShapesPtr).asUint()
+
+    shape_nodes = []
+    for shape_index in range(num_shape_nodes):
+        mDag.extendToShapeDirectlyBelow(shape_index)
+        shape_mObj = mDag.node()
+
+        if shape_mObj.apiTypeStr() == 'kMesh':
+            shape_nodes.append(mDag.fullPathName())
+
+    return shape_nodes
+
+def getSkinCluster(meshTransform):
+    obj = OpenMaya.MObject()
+    path = OpenMaya.MDagPath()
+    sel = OpenMaya.MSelectionList()
+
+    sel.add(meshTransform)
+    sel.getDagPath(0, path)
+    sel.getDependNode(0, obj)
+
+    try:
+        path.extendToShape()
+    except RuntimeError:
+        print '\nFailed to find geo shape node: %s' % path.fullPathName()
+        raise
+
+    iter = OpenMaya.MItDependencyGraph(obj, OpenMaya.MFn.kSkinClusterFilter, OpenMaya.MItDependencyGraph.kUpstream)
+
+    while not iter.isDone():
+        currentObj = iter.currentItem()
+        fnSkin = OpenMayaAnim.MFnSkinCluster(currentObj)
+        if fnSkin:
+            break
+        iter.next()
+
+    skinClusterObj = fnSkin.object()
+    skinClusterFn = OpenMaya.MFnDependencyNode(skinClusterObj)
+    return skinClusterFn.name()
 
 # import maya.cmds as cmds
 # import maya.api.OpenMaya as OpenMaya
@@ -135,74 +232,3 @@ def getAttrListDifference( m_obj, m_objRef ):
 #  sys.stdout.write('\nTranslation : %s' %matDecomp[0])
 #  sys.stdout.write('\nRotation    : %s' %matDecomp[1])
 #  sys.stdout.write('\nScale       : %s\n' %matDecomp[2])
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# def set_poleVector(rootJnt, midJnt, endJnt):
-#     rootIkPos = cmds.xform(rootJnt, translation=True, worldSpace=True, query=True)
-#     midIkPos = cmds.xform(midJnt, translation=True, worldSpace=True, query=True)
-#     endIkPos = cmds.xform(endJnt, translation=True, worldSpace=True, query=True)
-#
-#
-#
-#
-#     # I'm using hard-coded joint names for this example
-#     # Create Joint Vectors
-#     try:
-#         shoulderIkPos = cmds.xform('shldr_jnt', q=True, ws=True, t=True)
-#         shoulderIkVec = OpenMaya.MVector(shoulderIkPos[0], shoulderIkPos[1], shoulderIkPos[2])
-#         elbowIkPos = cmds.xform('elbw_jnt', q=True, ws=True, t=True)
-#         elbowIkVec = OpenMaya.MVector(elbowIkPos[0], elbowIkPos[1], elbowIkPos[2])
-#         wristIkPos = cmds.xform('wrst_jnt', q=True, ws=True, t=True)
-#         wristIkVec = OpenMaya.MVector(wristIkPos[0], wristIkPos[1], wristIkPos[2])
-#     except:
-#             cmds.error('All arm joints not found or named incorrectly')
-#
-#     # Transpose vectors to correct pole vector translation point
-#     bisectorVec = (shoulderIkVec * 0.5) + (wristIkVec * 0.5)
-#     transposedVec = (elbowIkVec * distanceScale) - (bisectorVec * distanceScale)
-#     ikChainPoleVec = bisectorVec + transposedVec
-#
-#     # Create a pole vector
-#     poleVecCon = cmds.spaceLocator(name='%selbowPV' % prefix)
-#     poleVecPos = [ikChainPoleVec.x, ikChainPoleVec.y, ikChainPoleVec.z]
-#     cmds.xform(poleVecCon, t=poleVecPos)
-#     cmds.delete(cmds.orientConstraint('elbw_jnt', poleVecCon))
-#
-#     # Visualize Vectors and End Points
-#     if verbose:
-#         for vector, letter in zip([bisectorVec, transposedVec, ikChainPoleVec,
-#                                    shoulderIkVec, elbowIkVec, wristIkVec],
-#                                   ['bisectorVec', 'transposedVec', 'ikChainPoleVec',
-#                                   'shoulderIk', 'elbowIk', 'wristIk']):
-#             cmds.spaceLocator(n='%sVecLoc' % letter, p=[vector.x, vector.y, vector.z])
-#             cmds.curve(n='%sVecCurve' % letter, degree=1, p=[(0, 0, 0), (vector.x, vector.y, vector.z)])
-#
-#     return poleVecCon
