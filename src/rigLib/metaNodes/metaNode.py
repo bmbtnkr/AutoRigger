@@ -8,7 +8,7 @@ from src.utils import apiUtils
 # ToDo: code cleanup, comments, stub cleanup
 # ToDo: dynamic adding/removing children as a multi type attribute with indexing
 
-__VERSION__ = 0.0
+__VERSION__ = 0.1
 
 class MetaNode(object):
     def __init__(self, name='_metanode', create=True, metaParent=None, metaType='metaNode', version=__VERSION__, metaChildren=()):
@@ -35,6 +35,10 @@ class MetaNode(object):
         return self.name
 
     def create_node(self):
+        if cmds.objExists(self.name):
+            cmds.error('Meta node already exists: %s' % self.name)
+            return None
+
         cmds.createNode('network', name=self.name)
         cmds.addAttr(self.name, longName='metaType', dataType='string', keyable=False)
         cmds.addAttr(self.name, longName='version', attributeType='float', defaultValue=self.version, keyable=False)
@@ -101,6 +105,14 @@ class MetaNode(object):
         cmds.setAttr('%s.metaType' % self.name, metaType, type='string')
         cmds.setAttr('%s.metaType' % self.name, lock=True)
 
+    def set_version(self, version):
+        cmds.setAttr('%s.version' % self.name, lock=False)
+        cmds.setAttr('%s.version' % self.name, version)
+        cmds.setAttr('%s.version' % self.name, lock=True)
+        return self.version
+
+    def get_version(self):
+        return self.version
 
     def get_metaChildren(self):
         self.metaChildren = cmds.listConnections('%s.metaChildren' % self.name)

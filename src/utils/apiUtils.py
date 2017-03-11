@@ -122,33 +122,65 @@ def get_shapeNodes(obj):
 
     return shape_nodes
 
-def getSkinCluster(meshTransform):
-    obj = OpenMaya.MObject()
-    path = OpenMaya.MDagPath()
-    sel = OpenMaya.MSelectionList()
-
-    sel.add(meshTransform)
-    sel.getDagPath(0, path)
-    sel.getDependNode(0, obj)
-
-    try:
-        path.extendToShape()
-    except RuntimeError:
-        print '\nFailed to find geo shape node: %s' % path.fullPathName()
-        raise
-
+def get_skinCluster(meshShape):
+    obj = get_mObject(meshShape)
     iter = OpenMaya.MItDependencyGraph(obj, OpenMaya.MFn.kSkinClusterFilter, OpenMaya.MItDependencyGraph.kUpstream)
+    fnSkin = None
 
     while not iter.isDone():
         currentObj = iter.currentItem()
         fnSkin = OpenMayaAnim.MFnSkinCluster(currentObj)
-        if fnSkin:
-            break
-        iter.next()
+        break
 
     skinClusterObj = fnSkin.object()
     skinClusterFn = OpenMaya.MFnDependencyNode(skinClusterObj)
     return skinClusterFn.name()
+
+def get_shaders(meshShape):
+    mObj = get_mObject(meshShape)
+    fnMesh = OpenMaya.MFnMesh(mObj)
+
+    instances = fnMesh.parentCount()
+
+    for i in range(instances):
+        _fn = OpenMaya.MFnDependencyNode(fnMesh.parent(i))
+        shaders = OpenMaya.MObjectArray()
+        indices = OpenMaya.MIntArray()
+        fnMesh.getConnectedShaders(i, shaders, indices)
+
+    fnShadingEngine = OpenMaya.MFnDependencyNode(shaders[0])
+    shadingObj = get_mObject(fnShadingEngine.name())
+    fnShader = OpenMaya.MFnDependencyNode(shadingObj)
+    plug = OpenMaya.MPlug(fnShader.findPlug('surfaceShader'))
+    materials = OpenMaya.MPlugArray()
+    plug.connectedTo(materials, True, False)  # asDes - bool, asSrc - bool
+
+    if materials.length():
+        fnMat = OpenMaya.MFnDependencyNode(materials[0].node())
+        return fnMat
+    return None
+
+
+def get_texture(meshShape):
+    fnMat = get_shaders(meshShape)
+    colorPlug = OpenMaya.MPlug(fnMat.findPlug('color'))
+    colorArray = OpenMaya.MPlugArray()
+    colorPlug.connectedTo(colorArray, True, False)
+
+    if colorArray.length():
+        fnTex = OpenMaya.MFnDependencyNode(colorArray[0].node())
+        return fnTex
+    return None
+
+def get_texturePath(meshShape):
+    fnTex = get_texture(meshShape)
+
+    if fnTex.hasAttribute('fileTextureName'):
+        fnFile = OpenMaya.MFnDependencyNode(get_mObject(fnTex.name()))
+        ftnPlug = fnFile.findPlug('fileTextureName')
+        ftnPath = ftnPlug.asString()
+        return ftnPath
+    return None
 
 # import maya.cmds as cmds
 # import maya.api.OpenMaya as OpenMaya

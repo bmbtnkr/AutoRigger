@@ -8,40 +8,112 @@ from src.utils import apiUtils
 reload(metaNode)
 reload(apiUtils)
 
+# __VERSION__ = 0.11
+
 
 class MetaMesh(metaNode.MetaNode):
-    def __init__(self, mesh=None, textures=(), skinCluster=None, *args, **kwargs):
+    def __init__(self, mesh=None, shader=None, texture=None, texturePath=None, skinCluster=None, *args, **kwargs):
         self.mesh = mesh
-        self.textures = textures
+        self.shader = shader
+        self.texture = texture
+        self.texturePath = texturePath
         self.skinCluster = skinCluster
         super(MetaMesh, self).__init__(*args, **kwargs)
+        # self.version = __VERSION__
 
-        if self.create:
-            self.create_meshMetaNode()
+        self.shape = None
+        self.file = None
 
-    def create_meshMetaNode(self):
         self.set_metaType('metaMesh')
+        self.set_version(self.version)
+
+    def create_node(self):
+        super(MetaMesh, self).create_node()
+
+        if not cmds.objExists(self.mesh):
+            cmds.warning('Mesh name does not exist: %s' % self.mesh)
+            cmds.delete(self.name)
+            return None
+
         self.add_attr('metaMesh_transform')
         self.add_attr('metaMesh_shape')
-        self.add_attr('metaMesh_shaders', multi=True)
-        self.add_attr('metaMesh_textures', multi=True)
-        self.add_attr(attr='metaMesh_skinCluster')
+        self.add_attr('metaMesh_shader')
+        self.add_attr('metaMesh_texture')
+        self.add_attr('metaMesh_texturePath', attr_type='string')
+        self.add_attr('metaMesh_skinCluster')
         self.add_attr('metaMesh_file', attr_type='string')
 
-        self.connect_attr_to_obj('metaMesh_transform', self.mesh, 'metaMesh_transform')
-        self.connect_attr_to_obj('metaMesh_shape', apiUtils.get_shapeNodes(self.mesh)[0], 'metaMesh_shape')
+        self.shape = apiUtils.get_shapeNodes(self.mesh)[0]
+        self.file = self.set_file()
+        self.skinCluster = self.set_skinCluster()
+
+        self.connect_attr_to_obj('metaMesh_transform', self.mesh, 'metaParent')
+        self.connect_attr_to_obj('metaMesh_shape', self.shape, 'metaParent')
+        self.connect_attr_to_obj('metaMesh_skinCluster', self.skinCluster, 'metaParent')
+        self.connect_attr_to_obj('metaMesh_shader', self.set_shader(), 'metaParent')
+        self.connect_attr_to_obj('metaMesh_texture', self.set_texture(), 'metaParent')
+
+        self.set_texturePath()
+
+    # def update_meshMetaAttrs(self):
+    #     self.set_metaType(self.metaType)
+    #     self.set_version(self.version)
+    #     self.shape = apiUtils.get_shapeNodes(self.mesh)[0]
+    #     self.file = self.set_file()
+    #     self.skinCluster = self.set_skinCluster()
+    #     self.connect_attr_to_obj('metaMesh_transform', self.mesh, 'metaParent')
+    #     self.connect_attr_to_obj('metaMesh_shape', self.shape, 'metaParent')
+    #     self.connect_attr_to_obj('metaMesh_skinCluster', self.set_skinCluster(), 'metaParent')
+    #     self.connect_attr_to_obj('metaMesh_shader', self.set_shader(), 'metaParent')
+    #     self.connect_attr_to_obj('metaMesh_texture', self.set_texture(), 'metaParent')
+    #     self.set_texturePath()
 
     def get_shapeNodes(self):
-        print 'shapeNodes:'  # wip
+        if self.mesh:
+            return apiUtils.get_shapeNodes(self.mesh)
+        return None
 
     def get_skinCluster(self):
-        pass
+        return self.skinCluster
 
-    def get_shaders(self):
-        pass
+    def set_skinCluster(self):
+        if self.mesh:
+            shape = apiUtils.get_shapeNodes(self.mesh)
 
-    def get_textures(self):
-        pass
+            if not shape:
+                return None
+
+            self.skinCluster = apiUtils.get_skinCluster(shape[0])
+            return self.skinCluster
+
+        return None
+
+    def get_shader(self):
+        return self.shader
+
+    def set_shader(self):
+        self.shader = apiUtils.get_shaders(self.shape).name()
+        return self.shader
+
+    def get_texture(self):
+        return self.texture
+
+    def set_texture(self):
+        self.texture = apiUtils.get_texture(self.shape).name()
+        return self.texture
+
+    def get_texturePath(self):
+        return self.texturePath
+
+    def set_texturePath(self):
+        self.texturePath = str(apiUtils.get_texturePath(self.shape))
+        cmds.setAttr('%s.metaMesh_texturePath' % self.name, lock=False)
+        cmds.setAttr('%s.metaMesh_texturePath' % self.name, self.texturePath, type='string')
+        cmds.setAttr('%s.metaMesh_texturePath' % self.name, lock=True)
+        return self.texturePath
+
+    def get_file(self):
+        return self.file
 
     def set_file(self):
         # make this a method in scene utils
@@ -54,14 +126,12 @@ class MetaMesh(metaNode.MetaNode):
         model_path = current_path.replace(rig_file, model_file).replace(rig_folder, model_folder)
 
         if os.path.exists(model_path):
-            cmds.setAttr('%s.metaMesh_file' % self.name, model_path, type='string')
+            cmds.setAttr('%s.metaMesh_file' % self.name, model_path, type='string', lock=True)
             return model_path
         else:
-            cmds.setAttr('%s.metaMesh_file' % self.name, 'MODEL_FILE_NOT_FOUND', type='string')
+            cmds.setAttr('%s.metaMesh_file' % self.name, 'MODEL_FILE_NOT_FOUND', type='string', lock=True)
             cmds.warning('Model file: %s not found' % model_path)
-
-    def get_file(self):
-        pass
+            return None
 
 """
 import sys
