@@ -1,4 +1,6 @@
+import itertools
 import maya.cmds as cmds
+
 """
 Module for creating a Maya transform object
 """
@@ -185,6 +187,17 @@ class Transform(object):
         if not hideChannels and not self.hideAttrs:
             return False
         channels = hideChannels if hideChannels else self.hideAttrs
+
+        # necessary to explicitly call which attributes to hide in cmds.setAttr()
+        channels = list(channels)
+        for attr in channels:
+            if attr == 't' or attr == 'r' or attr == 's':
+                channels[channels.index(attr)] = \
+                    ['%s%s' % (attr, axis) for axis in ['x', 'y', 'z']]
+            else:
+                channels[channels.index(attr)] = [attr]
+        channels = tuple(list(itertools.chain.from_iterable(channels)))
+
         if type(channels) == list or type(channels) == tuple:
             [cmds.setAttr('%s.%s' % (self.name, attr), keyable=False, channelBox=False) for attr in channels]
         elif type(channels) == str:
