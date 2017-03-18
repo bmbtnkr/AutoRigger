@@ -11,12 +11,14 @@ from src.utils import apiUtils
 __VERSION__ = 0.1
 
 class MetaNode(object):
-    def __init__(self, name='_metanode', create=True, metaParent=None, metaType='metaNode', version=__VERSION__, metaChildren=()):
+    def __init__(self, name='_metanode', create=True, metaParent=None, metaType='metaNode', version=__VERSION__,
+                 project='Marvel', metaChildren=()):
         self.name = name
         self.create = create
         self.metaParent = metaParent
         self.metaType = metaType
         self.version = version
+        self.project = project
         self.metaChildren = metaChildren
 
         if self.create:
@@ -42,11 +44,13 @@ class MetaNode(object):
         cmds.createNode('network', name=self.name)
         cmds.addAttr(self.name, longName='metaType', dataType='string', keyable=False)
         cmds.addAttr(self.name, longName='version', attributeType='float', defaultValue=self.version, keyable=False)
+        cmds.addAttr(self.name, longName='project', dataType='string', keyable=False)
         cmds.addAttr(self.name, longName='metaParent', attributeType='message', readable=False, writable=True)
         cmds.addAttr(self.name, longName='metaChildren', attributeType='message', multi=True)
         # cmds.addAttr(self.name, longName='metaChildren', attributeType='message')
 
         cmds.setAttr('%s.version' % self.name, lock=True)
+        cmds.setAttr('%s.project' % self.name, self.project, type='string', lock=True)
 
     def connect_attr_to_obj(self, source_attr, obj, target_attr):
         if cmds.objExists(obj):
