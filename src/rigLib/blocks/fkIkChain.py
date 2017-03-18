@@ -24,6 +24,10 @@ Control Flags: FK[...], IK, Pole Vector, FK/IK Switch
 # chain terminator = "arm"
 
 # ToDo: make this work with any number of middle joints
+# ToDo: add bendy/rotate joints in between each bone
+# ToDo: make sure hide attrs is working
+# ToDo: make this work with any number of middle joints
+# ToDo: make this work with any number of middle joints
 
 import maya.cmds as cmds
 import maya.OpenMaya as OpenMaya
@@ -104,13 +108,18 @@ class FkIkChain(object):
         self.fkMidCtrl.lockChannels(('t', 's', 'v'))
         self.fkEndCtrl.lockChannels(('t', 's', 'v'))
 
+        self.fkRootCtrl.hideChannels(('t', 's', 'v'))
+        self.fkMidCtrl.hideChannels(('t', 's', 'v'))
+        self.fkEndCtrl.hideChannels(('t', 's', 'v'))
+
         fkRootOrientConstraint = cmds.orientConstraint(self.fkRootCtrl.name, self.rootJnt)[0]
         fkMidOrientConstraint = cmds.orientConstraint(self.fkMidCtrl.name, self.midJnt)[0]
         fkEndOrientConstraint = cmds.orientConstraint(self.fkEndCtrl.name, self.endJnt)[0]
 
         # create ik ctrls
         self.ikCtrl = control.Control(name=self.endJnt.name.replace('jt', 'ctrl').replace('template', 'ik'),
-                                      translateTo=self.endJnt, rotateTo=self.endJnt, lockAttrs=('r', 's', 'v'))
+                                      translateTo=self.endJnt, rotateTo=self.endJnt,
+                                      lockAttrs=('r', 's', 'v'), hideAttrs=('r', 's', 'v'))
         self.ikCtrl.create_null_grps()
         self.ikCtrl.nullGrp.set_scale((2,2,2))
         cmds.addAttr(self.ikCtrl.name, longName='ikBlend', attributeType='float', defaultValue=1, minValue=0, maxValue=1, keyable=True)
@@ -150,7 +159,7 @@ class FkIkChain(object):
         startEndN = startEnd.normal()
         projV = startEndN * proj
         arrowV = startMid - projV
-        arrowV *= 2
+        arrowV *= 10
         finalV = arrowV + midV
         pos = (finalV.x, finalV.y, finalV.z)
 
