@@ -10,10 +10,17 @@ reload(apiUtils)
 
 # __VERSION__ = 0.11
 
+# ToDo: store zero pose - in biped compound
+# ToDo: pose mirroring per frame or time-line / ranges
+# ToDo: store poses in an attr
+# ToDo: store mirror data?
+# ToDo: store attribute settings and values in json to revert to bind pose state
+# ToDo: allow mass hierarchy or single node attribute locking / hiding
+
 
 class MetaRig(metaNode.MetaNode):
     """some doc info"""
-    def __init__(self, rootJnt=None, rigType=None, *args, **kwargs):
+    def __init__(self, rootJnt=None, rigType='metaRig_root', *args, **kwargs):
         self.rootJnt = rootJnt
         self.rigType = rigType
         super(MetaRig, self).__init__(*args, **kwargs)
@@ -29,9 +36,10 @@ class MetaRig(metaNode.MetaNode):
             cmds.delete(self.name)
             return None
 
-        self.add_attr('metaRig_rootJnt')
-        self.add_attr('metaRig_rigType')
+        self.add_attr('metaRig_type', attr_type='string')
+        self.set_rigType()
 
+        self.add_attr('metaRig_rootJnt')
         self.connect_attr_to_obj('metaRig_rootJnt', self.rootJnt, 'metaParent')
 
     def get_rootJnt(self):
@@ -43,6 +51,18 @@ class MetaRig(metaNode.MetaNode):
             return self.rootJnt
         return None
 
+    def set_rigType(self, rigType=None):
+        cmds.setAttr('%s.metaRig_type' % self.name, lock=False)
+        if rigType:
+            self.rigType = rigType
+            cmds.setAttr('%s.metaRig_type' % self.name, self.rigType, type='string')
+            cmds.setAttr('%s.metaRig_type' % self.name, lock=True)
+            return self.rigType
+        elif self.rigType:
+            cmds.setAttr('%s.metaRig_type' % self.name, self.rigType, type='string')
+            cmds.setAttr('%s.metaRig_type' % self.name, lock=True)
+            return self.rigType
+        return None
 
 """
 import sys
