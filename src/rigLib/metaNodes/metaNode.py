@@ -160,19 +160,17 @@ class MetaNode(object):
             parent = cmds.listConnections('%s.metaParent' % node)[0]
             return self.get_metaRoot(parent)
 
-    def get_metaChildren_of_type(self, type):
+    def get_metaChildren_of_type(self, metaType):
         """
         :param type: type(str) meta node metaType
         :return: type(list) of all meta node metaChildren of this metaType via parent/children connections
         """
-        children = self.get_metaChildren()
         children_of_type = []
 
-        for child in children:
-            child = eval(cmds.ls(str(child))[0])
-
-            if child.get_metaType() == type:
-                children_of_type.append(child)
+        for child in self.get_metaChildren():
+            if cmds.attributeQuery('metaType', node=child, exists=True):
+                if cmds.getAttr('%s.metaType' % child) == metaType:
+                    children_of_type.append(child)
 
         if not children_of_type:
             return None
