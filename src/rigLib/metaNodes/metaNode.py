@@ -8,27 +8,29 @@ from src.utils import apiUtils
 # ToDo: code cleanup, comments, stub cleanup
 # ToDo: dynamic adding/removing children as a multi type attribute with indexing
 
-__VERSION__ = 0.1
+__VERSION__ = 1.0
+__PROJECT__ = 'Marvel'
+
+
+def lazy_property(fn):
+    attr_name = '_lazy_' + fn.__name__
+
+    @property
+    def _lazy_property(self):
+        if not hasattr(self, attr_name):
+            setattr(self, attr_name, fn(self))
+        return getattr(self, attr_name)
+    return _lazy_property
+
 
 class MetaNode(object):
-    def __init__(self, name='_metanode', create=True, metaParent=None, metaType='metaNode', version=__VERSION__,
-                 project='Marvel', metaChildren=()):
+    def __init__(self, name='_metanode', create=True, metaChildren=()):
         self.name = name
         self.create = create
-        self.metaParent = metaParent
-        self.metaType = metaType
-        self.version = version
-        self.project = project
         self.metaChildren = metaChildren
 
         if self.create:
             self.create_node()
-
-        if self.metaType:
-            self.set_metaType(self.metaType)
-
-        if self.metaParent:
-            self.set_metaParent(self.metaParent)
 
         if self.metaChildren:
             self.set_metaChildren(self.metaChildren)
@@ -43,14 +45,15 @@ class MetaNode(object):
 
         cmds.createNode('network', name=self.name)
         cmds.addAttr(self.name, longName='metaType', dataType='string', keyable=False)
-        cmds.addAttr(self.name, longName='version', attributeType='float', defaultValue=self.version, keyable=False)
+        cmds.addAttr(self.name, longName='version', attributeType='float', defaultValue=0, keyable=False)
         cmds.addAttr(self.name, longName='project', dataType='string', keyable=False)
         cmds.addAttr(self.name, longName='metaParent', attributeType='message', readable=False, writable=True)
         cmds.addAttr(self.name, longName='metaChildren', attributeType='message', multi=True)
         # cmds.addAttr(self.name, longName='metaChildren', attributeType='message')
 
-        cmds.setAttr('%s.version' % self.name, lock=True)
-        cmds.setAttr('%s.project' % self.name, self.project, type='string', lock=True)
+        self.metaType = 'metaNode'
+        self.version = __VERSION__
+        self.project = __PROJECT__
 
     def connect_attr_to_obj(self, source_attr, obj, target_attr):
         if cmds.objExists(obj):
@@ -78,45 +81,69 @@ class MetaNode(object):
     def get_attrs(self):
         return apiUtils.get_extra_attrs(self.name)
 
-    def get_metaParent(self):
-        self.metaParent = cmds.listConnections('%s.metaParent' % self.name)
-        if self.metaParent:
-            return self.metaParent[0]
-        return None
-
-    def set_metaParent(self, metaParent):
-        if not metaParent:
+    @property
+    def metaParent(self):
+        try:
+            return cmds.listConnections('%s.metaParent' % self.name)[0]
+        except (TypeError, IndexError):
             return None
 
+    @metaParent.setter
+    def metaParent(self, metaParent):
         try:
             cmds.connectAttr('%s.metaChildren' % metaParent, '%s.metaParent' % self.name, force=True)
-            self.metaParent = self.get_metaParent()
         except RuntimeError:
             cmds.warning('%s is already connected to %s' % (metaParent, self.name))
-            return None
 
-    def get_metaType(self):
-        """
-        :return: type(str) metaNode metaType
-        """
-        return self.metaType
+    @property
+    def metaType(self):
+        return 'metaNode'
 
-    def set_metaType(self, metaType):
+    @metaType.getter
+    def metaType(self):
         if not apiUtils.get_plug(self.name, 'metaType'):
-            return False
+            return None
+        return cmds.getAttr('%s.metaType' % self.name)
 
+    @metaType.setter
+    def metaType(self, metaType):
+        if not apiUtils.get_plug(self.name, 'metaType'):
+                metaType = None
         cmds.setAttr('%s.metaType' % self.name, lock=False)
         cmds.setAttr('%s.metaType' % self.name, metaType, type='string')
         cmds.setAttr('%s.metaType' % self.name, lock=True)
 
-    def set_version(self, version):
+    @property
+    def project(self):
+        return __PROJECT__
+
+    @project.getter
+    def project(self):
+        if not apiUtils.get_plug(self.name, 'project'):
+            return None
+        return cmds.getAttr('%s.project' % self.name)
+
+    @project.setter
+    def project(self, project):
+        cmds.setAttr('%s.project' % self.name, lock=False)
+        cmds.setAttr('%s.project' % self.name, project, type='string')
+        cmds.setAttr('%s.project' % self.name, lock=True)
+
+    @property
+    def version(self):
+        return __VERSION__
+
+    @version.getter
+    def version(self):
+        if not apiUtils.get_plug(self.name, 'version'):
+            return None
+        return cmds.getAttr('%s.version' % self.name)
+
+    @version.setter
+    def version(self, version):
         cmds.setAttr('%s.version' % self.name, lock=False)
         cmds.setAttr('%s.version' % self.name, version)
         cmds.setAttr('%s.version' % self.name, lock=True)
-        return self.version
-
-    def get_version(self):
-        return self.version
 
     def get_metaChildren(self):
         self.metaChildren = cmds.listConnections('%s.metaChildren' % self.name)
@@ -225,18 +252,18 @@ reload(metaNode)
 
 cmds.file(new=1, force=1)
 
-meta_child1 = metaNode.MetaNode('meta_child1', version=2.3)
+meta_child1 = metaNode.MetaNode('meta_child1')
 meta_child2 = metaNode.MetaNode('meta_child2')
 meta_child3 = metaNode.MetaNode('meta_child3')
-meta_parent1 = metaNode.MetaNode('meta_parent1', metaType='metaType_parentType', metaChildren=meta_child1.name)
+meta_parent1 = metaNode.MetaNode('meta_parent1', metaChildren=meta_child1.name)
 
-meta_child2.set_metaParent(meta_parent1.name)
+meta_child2.metaParent = meta_parent1
 meta_child2.set_metaChildren(meta_child3.name)
 
-print meta_child1.get_metaParent()
-print meta_child2.get_metaParent()
-print meta_child3.get_metaParent()
-print meta_parent1.get_metaParent()
+print meta_child1.metaParent
+print meta_child2.metaParent
+print meta_child3.metaParent
+print meta_parent1.metaParent
 
 print meta_child1.get_metaChildren()
 print meta_child2.get_metaChildren()
