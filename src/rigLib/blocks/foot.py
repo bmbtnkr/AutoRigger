@@ -70,13 +70,17 @@ class Foot(object):
         cmds.parentConstraint(self.ikCtrl, heelLocNull, maintainOffset=True)
 
         # add roll attributes on foot control
+        cmds.addAttr(self.ikCtrl, longName='footRollControls', attributeType='enum', enumName='==========', keyable=True)
+        cmds.setAttr('%s.footRollControls' % self.ikCtrl, lock=True)
         cmds.addAttr(self.ikCtrl, longName='roll', attributeType='float', defaultValue=0, minValue=-90, keyable=True)
         cmds.addAttr(self.ikCtrl, longName='bendLimitAngle', attributeType='float', defaultValue=45, keyable=True)
         cmds.addAttr(self.ikCtrl, longName='toeStraightAngle', attributeType='float', defaultValue=70, keyable=True)
-        cmds.addAttr(self.ikCtrl, longName='tilt', attributeType='float', defaultValue=0, minValue=-90, maxValue=90, keyable=True)
-        cmds.addAttr(self.ikCtrl, longName='lean', attributeType='float', defaultValue=0, keyable=True)
-        cmds.addAttr(self.ikCtrl, longName='toeSpin', attributeType='float', defaultValue=0, keyable=True)
-        cmds.addAttr(self.ikCtrl, longName='toeWiggle', attributeType='float', defaultValue=0, keyable=True)
+        cmds.addAttr(self.ikCtrl, longName='sideRoll', attributeType='float', defaultValue=0, minValue=-90, maxValue=90, keyable=True)
+        cmds.addAttr(self.ikCtrl, longName='ballLean', attributeType='float', defaultValue=0, keyable=True)
+        cmds.addAttr(self.ikCtrl, longName='heelSwivel', attributeType='float', defaultValue=0, keyable=True)
+        cmds.addAttr(self.ikCtrl, longName='ballSwivel', attributeType='float', defaultValue=0, keyable=True)
+        cmds.addAttr(self.ikCtrl, longName='toeSwivel', attributeType='float', defaultValue=0, keyable=True)
+        cmds.addAttr(self.ikCtrl, longName='toeRaise', attributeType='float', defaultValue=0, keyable=True)
 
         # setup reverse foot roll with nodes
         heelRotClamp = cmds.createNode('clamp', name='clamp_%s_heelRot' % self.ikCtrl)
@@ -125,22 +129,32 @@ class Foot(object):
         cmds.connectAttr('%s.outputX' % toeRollMult, '%s.rotateX' % toeLoc)
 
         # setup side roll
-        # tilt = 0, inside = 0, outside = 0
-        # tilt = -90, inside = 90, outside = 0
-        # tilt = 90, inside = 0, outside = -90
-        # tilt -> remap(-90, 0, 90, 0) -> inside.rz
-        # tilt -> remap(0, 90, 0, -90) -> outside.rz
+        posTiltRemap = cmds.createNode('remapValue', name='remap_%s_tiltPos' % self.ikCtrl)
+        cmds.connectAttr('%s.sideRoll' % self.ikCtrl, '%s.inputValue' % posTiltRemap)
+        cmds.setAttr('%s.inputMin' % posTiltRemap, -90)
+        cmds.setAttr('%s.inputMax' % posTiltRemap, 0)
+        cmds.setAttr('%s.outputMin' % posTiltRemap, 90)
+        cmds.setAttr('%s.outputMax' % posTiltRemap, 0)
+        cmds.connectAttr('%s.outValue' % posTiltRemap, '%s.rotateZ' % insideLoc)
 
-        # setup lean / toe spin attrs
-        # lean = ball_LOC.rotateZ
-        # toe spin = toe_LOC.rotateZ
-        # change toe loc rot order to zxy
+        negTiltRemap = cmds.createNode('remapValue', name='remap_%s_tiltNeg' % self.ikCtrl)
+        cmds.connectAttr('%s.sideRoll' % self.ikCtrl, '%s.inputValue' % negTiltRemap)
+        cmds.setAttr('%s.inputMin' % negTiltRemap, 0)
+        cmds.setAttr('%s.inputMax' % negTiltRemap, 90)
+        cmds.setAttr('%s.outputMin' % negTiltRemap, 0)
+        cmds.setAttr('%s.outputMax' % negTiltRemap, -90)
+        cmds.connectAttr('%s.outValue' % negTiltRemap, '%s.rotateZ' % outsideLoc)
+
+        # setup lean / spin
+        cmds.connectAttr('%s.ballLean' % self.ikCtrl, '%s.rotateZ' % ballLoc)
+        cmds.connectAttr('%s.heelSwivel' % self.ikCtrl, '%s.rotateY' % heelLoc)
+        cmds.connectAttr('%s.ballSwivel' % self.ikCtrl, '%s.rotateY' % ballLoc)
+        cmds.connectAttr('%s.toeSwivel' % self.ikCtrl, '%s.rotateY' % toeLoc)
 
         # setup toe wiggle
-        # group toe ik handle to self
-        # snap group pivot to ball jnt
-        # toe wiggle -> toe wiggle ik grp . rotateX
-        # parent group under toe loc
+        toeWiggleGrp = transform.Transform(name='%s_grp' % toeIkHandle[0], translateTo=ballLoc, parent=insideLoc)
+        cmds.parent(toeIkHandle[0], toeWiggleGrp)
+        cmds.connectAttr('%s.toeRaise' % self.ikCtrl, '%s.rotateX' % toeWiggleGrp)
 
 # import maya.cmds as cmds
 # import maya.OpenMaya as OpenMaya
