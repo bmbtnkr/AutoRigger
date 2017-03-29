@@ -141,9 +141,9 @@ class FkIkChain(object):
         self.ikCtrl = control.Control(name=self.endJnt.name.replace('jt', 'ctrl').replace('result', 'ik'),
                                       translateTo=self.endJnt)
         self.ikCtrl.create_null_grps()
-        self.ikCtrl.lockChannels(('r', 's', 'v'))
-        self.ikCtrl.hideChannels(('r', 's', 'v'))
-        self.ikCtrl.nullGrp.set_scale((2,2,2))
+        self.ikCtrl.lockChannels(('s', 'v'))
+        self.ikCtrl.hideChannels(('s', 'v'))
+        self.ikCtrl.nullGrp.set_scale((2, 2, 2))
 
         cmds.addAttr(self.ikCtrl.name, longName='ikBlend', attributeType='float', defaultValue=1, minValue=0, maxValue=1, keyable=True)
         cmds.addAttr(self.ikCtrl.name, longName='stretch', attributeType='float', defaultValue=0, minValue=0, maxValue=1, keyable=True)
