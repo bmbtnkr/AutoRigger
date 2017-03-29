@@ -35,6 +35,7 @@ class FkChain(object):
     def __init__(self, joints=()):
         self.joints = joints
         self.control_joints = None
+        self.controls = []
 
     def create_joints(self, joints):
         cmds.select(clear=True)
@@ -51,58 +52,34 @@ class FkChain(object):
 
                 self.control_joints.append(control_joint)
 
-        cmds.makeIdentity(self.control_joints[1:-1], apply=True)
+        cmds.makeIdentity(self.control_joints[0], apply=True)
 
         return self.control_joints
 
     def get_joints(self):
         return self.control_joints
 
-    def create_controls(self):
-        pass
-
-    def get_controls(self):
-        pass
-
-    def get_constraints(self):
-        pass
-
     def create_block(self):
-        if len(self.joints) < 3:
-            cmds.warning('Could not build FkIkChain block, not enough joints', self.joints)
+        if not len(self.joints):
+            cmds.warning('Could not build FkIkChain block, not enough joint(s)', self.joints)
             return False
 
         self.create_joints(self.joints)
 
-        self.fkRootCtrl = control.Control(name=self.rootJnt.name.replace('jt', 'ctrl').replace('template', 'fk'),
-                                          translateTo=self.rootJnt, rotateTo=self.rootJnt, normal=(1, 0, 0))
+        for index, jnt in enumerate(self.control_joints):
+            fkCtrl = control.Control(name='ctrl_%s' % jnt.name,
+                                     translateTo=jnt, rotateTo=jnt, normal=(1, 0, 0))
 
-        self.fkMidCtrl = control.Control(name=self.midJnt.name.replace('jt', 'ctrl').replace('template', 'fk'),
-                                         translateTo=self.midJnt, rotateTo=self.midJnt, normal=(1, 0, 0))
+            self.controls.append(fkCtrl.name)
+            fkCtrl.create_null_grps()
+            fkCtrl.lockChannels(('t', 's', 'v'))
+            cmds.orientConstraint(fkCtrl.name, jnt)
 
-        self.fkEndCtrl = control.Control(name=self.endJnt.name.replace('jt', 'ctrl').replace('template', 'fk'),
-                                         translateTo=self.endJnt, rotateTo=self.endJnt)
+            try:
+                if index:
+                    cmds.parent(fkCtrl.nullGrp, self.controls[index-1])
+            except IndexError:
+                pass
 
-        self.fkRootCtrl.create_null_grps()
-        self.fkMidCtrl.create_null_grps()
-        self.fkEndCtrl.create_null_grps()
-
-        self.fkMidCtrl.nullGrp.set_parent(self.fkRootCtrl.name)
-        self.fkEndCtrl.nullGrp.set_parent(self.fkMidCtrl.name)
-
-        self.fkRootCtrl.lockChannels(('t', 's', 'v'))
-        self.fkMidCtrl.lockChannels(('t', 's', 'v'))
-        self.fkEndCtrl.lockChannels(('t', 's', 'v'))
-
-        fkRootOrientConstraint = cmds.orientConstraint(self.fkRootCtrl.name, self.rootJnt)[0]
-        fkMidOrientConstraint = cmds.orientConstraint(self.fkMidCtrl.name, self.midJnt)[0]
-        fkEndOrientConstraint = cmds.orientConstraint(self.fkEndCtrl.name, self.endJnt)[0]
-
-    def set_pole_vector(self):
-        pass
-
-    def get_pole_vector(self):
-        return self.poleVector
-
-    def get_joints(self):
-        return self.joints()
+        # self.fkMidCtrl.nullGrp.set_parent(self.fkRootCtrl.name)
+        # self.fkEndCtrl.nullGrp.set_parent(self.fkMidCtrl.name)
