@@ -11,6 +11,7 @@ import maya.cmds as cmds
 from src.rigLib.base import transform
 from src.rigLib.base import control
 from src.rigLib.base import joint
+from src.utils import apiUtils
 
 
 class Spine(object):
@@ -31,7 +32,7 @@ class Spine(object):
         cmds.rename(splineIkHandle[1], '%s_eff' % self.joints[-1])
 
         cmds.skinCluster(hipSplineJnt.name, chestSplineJnt.name, splineIkHandle[2])
-        cmds.rename(splineIkHandle[2], '%s_crv' % hipSplineJnt.name)
+        splineCurve = cmds.rename(splineIkHandle[2], '%s_crv' % hipSplineJnt.name)
 
         self.hipCtrl = control.Control(name=hipSplineJnt.name.replace('jnt', 'ctrl'), normal=(1, 0, 0),
                                        translateTo=hipSplineJnt, rotateTo=hipSplineJnt)
@@ -52,6 +53,12 @@ class Spine(object):
         cmds.setAttr('%s.dWorldUpType' % splineIkHandle[0], 4)
         cmds.connectAttr('%s.worldMatrix[0]' % hipSplineJnt, '%s.dWorldUpMatrix' % splineIkHandle[0])
         cmds.connectAttr('%s.worldMatrix[0]' % chestSplineJnt, '%s.dWorldUpMatrixEnd' % splineIkHandle[0])
+
+        # setup stretchy spine
+        spineCurveInfo = cmds.createNode('curveInfo', name='curveInfo_%s' % self.hipCtrl.name)
+        splineCurveShape = apiUtils.get_shapeNodes(splineCurve)[0]
+        cmds.connectAttr('%s.worldSpace[0]' % splineCurveShape, '%s.inputCurve' % spineCurveInfo)
+
 
 # import maya.cmds as cmds
 # import maya.OpenMaya as OpenMaya
