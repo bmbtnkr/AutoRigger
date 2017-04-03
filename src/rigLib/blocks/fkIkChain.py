@@ -145,6 +145,8 @@ class FkIkChain(object):
         self.ikCtrl.hideChannels(('s', 'v'))
         self.ikCtrl.nullGrp.set_scale((2, 2, 2))
 
+        cmds.addAttr(self.ikCtrl.name, longName='ikChainControls', attributeType='enum', enumName='-----', keyable=True)
+        cmds.setAttr('%s.ikChainControls' % self.ikCtrl.name, lock=True)
         cmds.addAttr(self.ikCtrl.name, longName='ikBlend', attributeType='float', defaultValue=1, minValue=0, maxValue=1, keyable=True)
         cmds.addAttr(self.ikCtrl.name, longName='stretch', attributeType='float', defaultValue=0, minValue=0, maxValue=1, keyable=True)
         cmds.addAttr(self.ikCtrl.name, longName='kneePin', attributeType='float', defaultValue=0, minValue=0, maxValue=1, keyable=True)
@@ -167,8 +169,6 @@ class FkIkChain(object):
         self.ikPvCtrl.hideChannels(('r', 's', 'v'))
 
         # Setup stretchy ik
-        # rootJntIkPosNull = transform.Transform(name='%s_pos_null' % self.rootJntIk, translateTo=self.rootJnt)
-
         ikStretchMidDistance = cmds.createNode('distanceBetween', name='dist_%s_mid_stretch' % self.ikCtrl.name)
         cmds.connectAttr('%s.worldMatrix[0]' % self.rootJntIk, '%s.inMatrix1' % ikStretchMidDistance)
         cmds.connectAttr('%s.worldMatrix[0]' % self.midJntIk, '%s.inMatrix2' % ikStretchMidDistance)
@@ -179,7 +179,7 @@ class FkIkChain(object):
 
         ikStretchCtrlDistance = cmds.createNode('distanceBetween', name='dist_%s_ctrl_stretch' % self.ikCtrl.name)
         cmds.connectAttr('%s.worldMatrix[0]' % self.rootJntIk, '%s.inMatrix1' % ikStretchCtrlDistance)
-        cmds.connectAttr('%s.worldMatrix[0]' % self.ikCtrl.name, '%s.inMatrix2' % ikStretchCtrlDistance)
+        cmds.connectAttr('%s.worldMatrix[0]' % self.ikHandle.name, '%s.inMatrix2' % ikStretchCtrlDistance)
 
         ikStretchFactorMult = cmds.createNode('multiplyDivide', name='div_%s_stretch' % self.ikCtrl.name)
         cmds.setAttr('%s.operation' % ikStretchFactorMult, 2)
@@ -207,7 +207,6 @@ class FkIkChain(object):
         cmds.connectAttr('%s.outputX' % ikStretchEndMult, '%s.color1G' % ikStretchAttrColor)
         cmds.setAttr('%s.color2R' % ikStretchAttrColor, cmds.getAttr('%s.distance' % ikStretchMidDistance))
         cmds.setAttr('%s.color2G' % ikStretchAttrColor, cmds.getAttr('%s.distance' % ikStretchEndDistance))
-        cmds.delete(ikStretchMidDistance, ikStretchEndDistance)
 
         # Setup knee pinning
         ikKneePinRootDistance = cmds.createNode('distanceBetween', name='dist_%s_root_kneePin' % self.ikCtrl.name)
@@ -216,7 +215,7 @@ class FkIkChain(object):
 
         ikKneePinEndDistance = cmds.createNode('distanceBetween', name='dist_%s_end_kneePin' % self.ikCtrl.name)
         cmds.connectAttr('%s.worldMatrix[0]' % self.ikPvCtrl.name, '%s.inMatrix1' % ikKneePinEndDistance)
-        cmds.connectAttr('%s.worldMatrix[0]' % self.ikCtrl.name, '%s.inMatrix2' % ikKneePinEndDistance)
+        cmds.connectAttr('%s.worldMatrix[0]' % self.ikHandle.name, '%s.inMatrix2' % ikKneePinEndDistance)
 
         ikKneePinAttrColor = cmds.createNode('blendColors', name='blend_%s_attr_kneePin' % self.ikCtrl.name)
         cmds.connectAttr('%s.kneePin' % self.ikCtrl.name, '%s.blender' % ikKneePinAttrColor)
