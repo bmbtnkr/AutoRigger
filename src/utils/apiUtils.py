@@ -117,7 +117,7 @@ def get_shapeNodes(obj):
         mDag.extendToShapeDirectlyBelow(shape_index)
         shape_mObj = mDag.node()
 
-        if shape_mObj.apiTypeStr() == 'kMesh':
+        if shape_mObj.apiTypeStr() == 'kMesh' or shape_mObj.apiTypeStr() == 'kNurbsCurve':
             shape_nodes.append(mDag.fullPathName())
 
     return shape_nodes
@@ -131,6 +131,9 @@ def get_skinCluster(meshShape):
         currentObj = iter.currentItem()
         fnSkin = OpenMayaAnim.MFnSkinCluster(currentObj)
         break
+
+    if not fnSkin:
+        return None
 
     skinClusterObj = fnSkin.object()
     skinClusterFn = OpenMaya.MFnDependencyNode(skinClusterObj)
@@ -174,6 +177,8 @@ def get_texture(meshShape):
 
 def get_texturePath(meshShape):
     fnTex = get_texture(meshShape)
+    if not fnTex:
+        return None
 
     if fnTex.hasAttribute('fileTextureName'):
         fnFile = OpenMaya.MFnDependencyNode(get_mObject(fnTex.name()))
