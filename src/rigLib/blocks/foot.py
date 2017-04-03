@@ -16,6 +16,9 @@ from src.rigLib.base import joint
 from src.utils import apiUtils
 from src.rigLib.base import locator
 
+#ToDo: make ball lean work with/without stretch
+#ToDo: hook up ik handle into distance calc instead of ik ctrl
+
 class Foot(object):
     def __init__(self, joints=(), legRig=None, heelPiv=None, insidePiv=None, outsidePiv=None):
         self.joints = joints
@@ -70,7 +73,7 @@ class Foot(object):
         cmds.parentConstraint(self.ikCtrl, heelLocNull, maintainOffset=True)
 
         # add roll attributes on foot control
-        cmds.addAttr(self.ikCtrl, longName='footRollControls', attributeType='enum', enumName='==========', keyable=True)
+        cmds.addAttr(self.ikCtrl, longName='footRollControls', attributeType='enum', enumName='-----', keyable=True)
         cmds.setAttr('%s.footRollControls' % self.ikCtrl, lock=True)
         cmds.addAttr(self.ikCtrl, longName='roll', attributeType='float', defaultValue=0, minValue=-90, keyable=True)
         cmds.addAttr(self.ikCtrl, longName='bendLimitAngle', attributeType='float', defaultValue=45, keyable=True)
