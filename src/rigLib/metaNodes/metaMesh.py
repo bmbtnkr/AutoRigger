@@ -10,6 +10,7 @@ reload(apiUtils)
 
 # __VERSION__ = 0.11
 
+# todo: self.shape not getting set correctly during init
 
 class MetaMesh(metaNode.MetaNode):
     def __init__(self, mesh=None, shader=None, texture=None, texturePath=None, skinCluster=None, *args, **kwargs):
@@ -77,16 +78,11 @@ class MetaMesh(metaNode.MetaNode):
         return self.skinCluster
 
     def set_skinCluster(self):
-        if self.mesh:
-            shape = apiUtils.get_shapeNodes(self.mesh)
+        if not self.mesh or not self.shape:
+            return None
 
-            if not shape:
-                return None
-
-            self.skinCluster = apiUtils.get_skinCluster(shape[0])
-            return self.skinCluster
-
-        return None
+        self.skinCluster = apiUtils.get_skinCluster(self.shape)
+        return self.skinCluster
 
     def get_shader(self):
         return self.shader
@@ -99,8 +95,10 @@ class MetaMesh(metaNode.MetaNode):
         return self.texture
 
     def set_texture(self):
-        self.texture = apiUtils.get_texture(self.shape).name()
-        return self.texture
+        self.texture = apiUtils.get_texture(self.shape)
+        if not self.texture:
+            return None
+        return self.texture.name()
 
     def get_texturePath(self):
         return self.texturePath
@@ -108,8 +106,7 @@ class MetaMesh(metaNode.MetaNode):
     def set_texturePath(self):
         self.texturePath = str(apiUtils.get_texturePath(self.shape))
         cmds.setAttr('%s.metaMesh_texturePath' % self.name, lock=False)
-        cmds.setAttr('%s.metaMesh_texturePath' % self.name, self.texturePath, type='string')
-        cmds.setAttr('%s.metaMesh_texturePath' % self.name, lock=True)
+        cmds.setAttr('%s.metaMesh_texturePath' % self.name, self.texturePath, type='string', lock=True)
         return self.texturePath
 
     def get_file(self):
@@ -118,20 +115,27 @@ class MetaMesh(metaNode.MetaNode):
     def set_file(self):
         # make this a method in scene utils
         current_path = cmds.file(sceneName=True, q=1)
-        rig_file = current_path.rpartition('/')[-1]
-        rig_folder = current_path.split('/')[-2]
 
-        model_file = rig_file.replace('_rig', '_mesh')
-        model_folder = rig_folder.replace('rig', 'model')
-        model_path = current_path.replace(rig_file, model_file).replace(rig_folder, model_folder)
 
-        if os.path.exists(model_path):
-            cmds.setAttr('%s.metaMesh_file' % self.name, model_path, type='string', lock=True)
-            return model_path
-        else:
-            cmds.setAttr('%s.metaMesh_file' % self.name, 'MODEL_FILE_NOT_FOUND', type='string', lock=True)
-            cmds.warning('Model file: %s not found' % model_path)
+        try:
+            rig_file = current_path.rpartition('/')[-1]
+            rig_folder = current_path.split('/')[-2]
+
+            model_file = rig_file.replace('_rig', '_mesh')
+            model_folder = rig_folder.replace('rig', 'model')
+            model_path = current_path.replace(rig_file, model_file).replace(rig_folder, model_folder)
+
+            if os.path.exists(model_path):
+                cmds.setAttr('%s.metaMesh_file' % self.name, lock=False)
+                cmds.setAttr('%s.metaMesh_file' % self.name, model_path, type='string', lock=True)
+                return model_path
+
+        except IndexError:
+            cmds.setAttr('%s.metaMesh_file' % self.name, lock=False)
+            cmds.setAttr('%s.metaMesh_file' % self.name, 'None', type='string', lock=True)
+            cmds.warning('Model file: %s not found' % self.mesh)
             return None
+
 
 """
 import sys
