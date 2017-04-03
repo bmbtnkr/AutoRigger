@@ -27,6 +27,7 @@ class Control(transform.Transform):
 
         control = cmds.circle(name=self.name, normal=self.normal) # move this to set shapes
         cmds.delete(self.name, constructionHistory=True)
+        cmds.setAttr('%s.rotateOrder' % self.name, channelBox=True, keyable=False)
         self.name = transform.Transform(control[0], create=False)
 
     def get_null_grps(self):
@@ -45,6 +46,7 @@ class Control(transform.Transform):
         self.name.set_translation(worldSpace=False)
         self.name.set_rotation(worldSpace=False)
         self.name.set_scale()
+        return self.nullGrp, self.offsetGrp, self.animGrp
 
     # get shapes
     def get_shapes(self):
