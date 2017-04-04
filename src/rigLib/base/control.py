@@ -25,10 +25,21 @@ class Control(transform.Transform):
     def create_node(self):
         cmds.select(clear=True)
 
-        control = cmds.circle(name=self.name, normal=self.normal) # move this to set shapes
+        controlShapesPath = '%s\\controlShapes.ma' % __file__.rpartition('\\')[0]
+
+        try:
+            cmds.file(controlShapesPath, reference=True, namespace='controlShapes')
+            control = cmds.duplicate('controlShapes:%s' % self.shape)
+        except ValueError:
+            cmds.warning('Shape type: %s not found.' % self.shape)
+            cmds.file(controlShapesPath, removeReference=True)
+            return None
+
+        cmds.file(controlShapesPath, removeReference=True)
+        control = cmds.rename(control, self.name)
         cmds.delete(self.name, constructionHistory=True)
         cmds.setAttr('%s.rotateOrder' % self.name, channelBox=True, keyable=False)
-        self.name = transform.Transform(control[0], create=False)
+        self.name = transform.Transform(control, create=False)
 
     def get_null_grps(self):
         return self.nullGrp, self.offsetGrp, self.animGrp
