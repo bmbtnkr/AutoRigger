@@ -28,6 +28,7 @@ class Transform(object):
         self.lockAttrs = lockAttrs
         self.hideAttrs = hideAttrs
         self.nonKeyableAttrs = nonKeyableAttrs
+        self.nullGrp = None
 
         if create:
             self.create_node()
@@ -68,6 +69,15 @@ class Transform(object):
     def create_node(self):
         cmds.select(clear=True)
         cmds.group(name=self.name, empty=True)
+
+    def create_null_grp(self):
+        self.nullGrp = cmds.group(name='null_%s_grp' % self.name, empty=True)
+        pos = cmds.xform(self.name, translation=True, worldSpace=True, query=True)
+        rot = cmds.xform(self.name, rotation=True, worldSpace=True, query=True)
+        scl = cmds.xform(self.name, scale=True, worldSpace=True, query=True)
+        cmds.xform(self.nullGrp, translation=pos, rotation=rot, scale=scl, worldSpace=True)
+        cmds.parent(self.nullGrp, self.get_parent())
+        cmds.parent(self.name, self.nullGrp)
 
     def delete(self):
         cmds.delete(self.name)
