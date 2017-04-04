@@ -31,7 +31,7 @@ Control Flags: FK[...], IK, Pole Vector, FK/IK Switch
 # ToDo: setup blend color node for result chain, but for translate as well - done
 # ToDo: setup ik knee pinning - done
 # ToDo: connect ik handle twist into new ik ctrl knee twist attribute - done
-# ToDo: add addtional tweak offset control to knee joint
+# ToDo: add additional tweak offset control to knee joint
 # ToDo: add soft Ik solver
 
 # Cleanup
@@ -139,11 +139,10 @@ class FkIkChain(object):
 
         # create ik ctrls
         self.ikCtrl = control.Control(name=self.endJnt.name.replace('jt', 'ctrl').replace('result', 'ik'),
-                                      translateTo=self.endJnt)
+                                      translateTo=self.endJnt, shape='box')
         self.ikCtrl.create_null_grps()
         self.ikCtrl.lockChannels(('s', 'v'))
         self.ikCtrl.hideChannels(('s', 'v'))
-        self.ikCtrl.nullGrp.set_scale((2, 2, 2))
 
         cmds.addAttr(self.ikCtrl.name, longName='ikChainControls', attributeType='enum', enumName='-----', keyable=True)
         cmds.setAttr('%s.ikChainControls' % self.ikCtrl.name, lock=True)
@@ -162,7 +161,7 @@ class FkIkChain(object):
 
         # create pv ctrl
         self.ikPvCtrl = control.Control(name=self.midJnt.name.replace('jt', 'ctrl').replace('result', 'pv'),
-                                        translate=self.set_pole_vector()[0], rotate=self.set_pole_vector()[1])
+                                        translate=self.set_pole_vector()[0], rotate=self.set_pole_vector()[1], shape='halfPyramid')
         self.ikPvCtrl.create_null_grps()
         cmds.poleVectorConstraint(self.ikPvCtrl.name, self.ikHandle.name)
         self.ikPvCtrl.lockChannels(('r', 's', 'v'))
@@ -184,7 +183,8 @@ class FkIkChain(object):
         ikStretchFactorMult = cmds.createNode('multiplyDivide', name='div_%s_stretch' % self.ikCtrl.name)
         cmds.setAttr('%s.operation' % ikStretchFactorMult, 2)
         cmds.connectAttr('%s.distance' % ikStretchCtrlDistance, '%s.input1X' % ikStretchFactorMult)
-        ikStretchSumDistance = float(cmds.getAttr('%s.distance' % ikStretchMidDistance) + cmds.getAttr('%s.distance' % ikStretchEndDistance))
+        ikStretchSumDistance = float(cmds.getAttr('%s.distance' % ikStretchMidDistance) +
+                                     cmds.getAttr('%s.distance' % ikStretchEndDistance))
         cmds.setAttr('%s.input2X' % ikStretchFactorMult, ikStretchSumDistance)
 
         ikStretchFactorCond = cmds.createNode('condition', name='cond_%s_stretch' % self.ikCtrl.name)
@@ -264,6 +264,12 @@ class FkIkChain(object):
         cmds.connectAttr('%s.rotate' % self.endJntFk, '%s.color2' % ankleResultRotBlendColors)
         cmds.connectAttr('%s.output' % ankleResultRotBlendColors, '%s.rotate' % self.endJnt)
         cmds.connectAttr('%s.ikBlend' % self.ikCtrl.name, '%s.blender' % ankleResultRotBlendColors)
+
+        # Setup soft ik
+
+
+        # Set attribute settings
+        cmds.setAttr('%s.translateX' % self.ikPvCtrl.name, 30)
 
 
     def set_pole_vector(self):
