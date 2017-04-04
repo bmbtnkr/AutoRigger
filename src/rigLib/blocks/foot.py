@@ -18,6 +18,7 @@ from src.rigLib.base import locator
 
 #ToDo: make ball lean work with/without stretch
 #ToDo: hook up ik handle into distance calc instead of ik ctrl
+#ToDo: create foot fk joints, parent under foot
 
 class Foot(object):
     def __init__(self, joints=(), legRig=None, heelPiv=None, insidePiv=None, outsidePiv=None):
@@ -158,6 +159,25 @@ class Foot(object):
         toeWiggleGrp = transform.Transform(name='%s_grp' % toeIkHandle[0], translateTo=ballLoc, parent=insideLoc)
         cmds.parent(toeIkHandle[0], toeWiggleGrp)
         cmds.connectAttr('%s.toeRaise' % self.ikCtrl, '%s.rotateX' % toeWiggleGrp)
+
+        # setup additional rotation controls
+        ballLoc.create_null_grp()
+        toeLoc.create_null_grp()
+
+        toePivotCtrl = control.Control(name=self.toeJntIk.name.replace('jt', 'ctrl'), translateTo=toeLoc,
+                                        rotateTo=toeLoc, shape='circle', lockAttrs=('t', 's', 'v'),
+                                       hideAttrs=('t', 's', 'v'))
+        toePivotCtrl.create_null_grps()
+
+        ballPivotCtrl = control.Control(name=self.ballJntIk.name.replace('jt', 'ctrl'), translateTo=ballLoc,
+                                        rotateTo=ballLoc, shape='circle', lockAttrs=('t', 's', 'v'),
+                                        hideAttrs=('t', 's', 'v'))
+        ballPivotCtrl.create_null_grps()
+        # cmds.parent(ballPivotCtrl.get_null_grps()[0], toePivotCtrl.name)
+
+        # create another null for ball Loc null, direct connect rotations to additional null,
+        # parent ball ik ctrl under toe ik ctrl
+
 
 # import maya.cmds as cmds
 # import maya.OpenMaya as OpenMaya
